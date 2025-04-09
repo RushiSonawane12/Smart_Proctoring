@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+{% load widget_tweaks %}
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="utf-8">
+    <style>
+        form {
+            margin: 50px;
+        }
+        .error {
+            color: red;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    {% include "exam/navbar.html" %}
+    <br><br><br>
+    <div class="container">
+        <h3 style="text-align: center;">Student Signup Form</h3>
+        <form id="signupForm" method="POST" autocomplete="off" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label for="first_name">First Name</label>
+                    {% render_field userForm.first_name|attr:'required:true' class="form-control" placeholder="First Name" %}
+                    <span class="error" id="firstNameError"></span>
+                </div>
+                <div class="form-group col-md-6">
+                    <label for="last_name">Last Name</label>
+                    {% render_field userForm.last_name|attr:'required:true' class="form-control" placeholder="Last Name" %}
+                    <span class="error" id="lastNameError"></span>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label for="mobile">Contact</label>
+                    {% render_field studentForm.mobile|attr:'required:true' class="form-control" placeholder="Contact Number" %}
+                    <span class="error" id="mobileError"></span>
+                </div>
+                <div class="form-group col-md-6">
+                    <label for="address">Address</label>
+                    {% render_field studentForm.address|attr:'required:true' class="form-control" placeholder="Address" %}
+                    <span class="error" id="addressError"></span>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label for="username">Email</label>
+                    {% render_field userForm.username|attr:'required:true' class="form-control" placeholder="Username" %}
+                    <span class="error" id="usernameError"></span>
+                </div>
+                <div class="form-group col-md-6">
+                    <label for="inputPassword4">Password</label>
+                    {% render_field userForm.password|attr:'required:true' class="form-control" placeholder="Password" %}
+                    <span class="error" id="passwordError"></span>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group col-md-12">
+                    <label for="profile_pic">Profile Picture</label>
+                    {% render_field studentForm.profile_pic|attr:'required:true' class="form-control" placeholder="" %}
+                    <span class="error" id="profilePicError"></span>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-success" style="border-radius: 0%;">Sign Up</button>
+        </form>
+    </div>
+
+    <br><br>
+    {% include "exam/footer.html" %}
+    
+    <script>
+        document.getElementById('signupForm').addEventListener('submit', function(event) {
+            let isValid = true;
+
+
+            // Clear previous error messages
+            document.querySelectorAll('.error').forEach(function(error) {
+                error.textContent = '';
+            });
+
+            // Validate first name
+            const firstName = document.getElementById('id_first_name').value;
+            if (!firstName) {
+                document.getElementById('firstNameError').textContent = 'First name is required.';
+                isValid = false;
+            }
+
+            // Validate last name
+            const lastName = document.getElementById('id_last_name').value;
+            if
+            (!lastName) {
+                document.getElementById('lastNameError').textContent = 'Last name is required.';
+                isValid = false;
+            }
+
+            // Validate mobile
+            const mobile = document.getElementById('id_mobile').value;
+            if (!mobile) {
+                document.getElementById('mobileError').textContent = 'Contact number is required.';
+                isValid = false;
+            } else if (!/^\d{10}$/.test(mobile)) {
+                document.getElementById('mobileError').textContent = 'Contact number must be exactly 10 digits.';
+                isValid = false;
+            }
+
+
+            //valdate username
+            const id_username = document.getElementById('id_username').value;
+            if (!id_username) {
+                document.getElementById('usernameError').textContent = 'username  is required.';
+                isValid = false;
+            } else if (!/^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(id_username)) {
+                document.getElementById('usernameError').textContent = 'Enter valid email id';
+                isValid = false;
+            }
+
+
+
+
+            // Validate address
+            const address = document.getElementById('id_address').value;
+            if (!address) {
+                document.getElementById('addressError').textContent = 'Address is required.';
+                isValid = false;
+            }
+
+
+
+
+            // Validate password
+            const password = document.getElementById('id_password').value;
+            if (!password) {
+                document.getElementById('passwordError').textContent = 'Password is required.';
+                isValid = false;
+            } else if (password.length < 8) {
+                document.getElementById('passwordError').textContent = 'Password must be at least 8 characters long.';
+                isValid = false;
+            }
+
+            // Validate profile picture
+            const profilePic = document.getElementById('id_profile_pic').value;
+            if (!profilePic) {
+                document.getElementById('profilePicError').textContent = 'Profile picture is required.';
+                isValid = false;
+            }
+
+            if (!isValid) {
+                event.preventDefault();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+{% load widget_tweaks %}
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <style>
+    form {
+      margin: 50px;
+    }
+
+    .error-message {
+      color: red;
+      font-size: 0.9em;
+    }
+  </style>
+</head>
+<body>
+  {% include "exam/navbar.html" %}
+
+  <br><br><br>
+  <div class="container">
+    <h3 style="text-align: center;">Teacher Signup Form</h3>
+    <form id="signupForm" method="POST" autocomplete="off" enctype="multipart/form-data">
+      {% csrf_token %}
+
+      <div class="form-row">
+        <div class="form-group col-md-6">
+          <label for="first_name">First Name</label>
+          {% render_field userForm.first_name|attr:'required:true' class="form-control" placeholder="First Name" %}
+          <span id="first_name_error" class="error-message"></span>
+        </div>
+        <div class="form-group col-md-6">
+          <label for="last_name">Last Name</label>
+          {% render_field userForm.last_name|attr:'required:true' class="form-control" placeholder="Last Name" %}
+          <span id="last_name_error" class="error-message"></span>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group col-md-6">
+          <label for="mobile">Contact</label>
+          {% render_field teacherForm.mobile|attr:'required:true' class="form-control" placeholder="Contact Number" %}
+          <span id="mobile_error" class="error-message"></span>
+        </div>
+        <div class="form-group col-md-6">
+          <label for="address">Address</label>
+          {% render_field teacherForm.address|attr:'required:true' class="form-control" placeholder="Address" %}
+          <span id="address_error" class="error-message"></span>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group col-md-6">
+          <label for="username">Email</label>
+          {% render_field userForm.username|attr:'required:true' class="form-control" placeholder="Email" %}
+          <span id="username_error" class="error-message"></span>
+        </div>
+        <div class="form-group col-md-6">
+          <label for="inputPassword4">Password</label>
+          {% render_field userForm.password|attr:'required:true' class="form-control" placeholder="password" %}
+          <span id="password_error" class="error-message"></span>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group col-md-12">
+          <label for="profile_pic">Profile Picture</label>
+          {% render_field teacherForm.profile_pic|attr:'required:true' class="form-control" placeholder="" %}
+          <span id="profile_pic_error" class="error-message"></span>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-success" style="border-radius:0px;">Sign Up</button>
+    </form>
+  </div>
+
+  <br><br>
+  {% include "exam/footer.html" %}
+
+  <script>
+    document.getElementById('signupForm').addEventListener('submit', function(event) {
+      // Get form elements
+      var firstName = document.getElementById('id_first_name');
+      var lastName = document.getElementById('id_last_name');
+      var mobile = document.getElementById('id_mobile');
+      var address = document.getElementById('id_address');
+      var username = document.getElementById('id_username');
+      var password = document.getElementById('id_password');
+      var profilePic = document.getElementById('id_profile_pic');
+
+      var isValid = true;
+
+      // Clear previous error messages
+      document.getElementById('first_name_error').textContent = '';
+      document.getElementById('last_name_error').textContent = '';
+      document.getElementById('mobile_error').textContent = '';
+      document.getElementById('address_error').textContent = '';
+      document.getElementById('username_error').textContent = '';
+      document.getElementById('password_error').textContent = '';
+      document.getElementById('profile_pic_error').textContent = '';
+
+      // Check required fields
+      if (!firstName.value.trim()) {
+        document.getElementById('first_name_error').textContent = 'First Name is required';
+        isValid = false;
+      }
+      if (!lastName.value.trim()) {
+        document.getElementById('last_name_error').textContent = 'Last Name is required';
+        isValid = false;
+      }
+      if (!mobile.value.trim()) {
+        document.getElementById('mobile_error').textContent = 'Contact is required';
+        isValid = false;
+      } else if (mobile.value.trim().length !== 10 || !/^\d+$/.test(mobile.value.trim())) {
+        document.getElementById('mobile_error').textContent = 'Contact must be 10 digits';
+        isValid = false;
+      }
+      if (!address.value.trim()) {
+        document.getElementById('address_error').textContent = 'Address is required';
+        isValid = false;
+      }
+      if (!username.value.trim()) {
+        document.getElementById('username_error').textContent = 'Username is required';
+        isValid = false;
+      }
+      if (!password.value.trim()) {
+        document.getElementById('password_error').textContent = 'Password is required';
+        isValid = false;
+      } else if (password.value.trim().length < 8) {
+        document.getElementById('password_error').textContent = 'Password must be at least 8 characters';
+        isValid = false;
+      }
+      if (!profilePic.value.trim()) {
+        document.getElementById('profile_pic_error').textContent = 'Profile Picture is required';
+        isValid = false;
+      }
+
+      if (!isValid) {
+        event.preventDefault();
+      }
+    });
+  </script>
+</body>
+</html>

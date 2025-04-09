@@ -1,0 +1,412 @@
+<html>
+
+
+<head>
+  <link href="//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="//netdna.bootstrapcdn.com/bootstrap/3.0.0/js/bootstrap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/face-landmarks-detection"></script>
+  <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script> <!-- Include Toastify library -->
+  <link href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css" rel="stylesheet">
+
+
+  <style>
+    /* Add your CSS styles here */
+    #video-container {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      width: 200px;
+      height: 150px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      overflow: hidden;
+      z-index: 9999;
+      cursor: move;
+    }
+
+    #video {
+      width: 100%;
+      height: 100%;
+    }
+
+    #timer {
+      font-size: 24px;
+      font-weight: bold;
+      color: #333;
+      background-color: #f0f0f0;
+      padding: 10px 20px;
+      border-radius: 5px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      display: inline-block;
+    }
+    body {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+  </style>
+</head>
+
+<body>
+  <div id="timer"></div>
+
+  <div class="jumbotron my-4">
+    <form class="form" autocomplete="off" onsubmit="return saveAns()" action="{% url 'calculate-marks' %}"
+      method="POST">
+      {% csrf_token %}
+      <h2 style="text-align: center;">Course: {{ course.course_name }}</h2>
+      {% for q in questions %}
+      <h3 class="text-danger">{{ forloop.counter }}. {{ q.question }}</h3>
+      <h4 style="text-align: right;">[{{ q.marks }} Marks]</h4>
+
+      <div class="form-check mx-4">
+        <input class="form-check-input" type="radio" name="{{ forloop.counter }}" id="{{ q.option1 }}" value="Option1">
+        <label class="form-check-label" for="option1">{{ q.option1 }}</label>
+      </div>
+
+      <div class="form-check mx-4">
+        <input class="form-check-input" type="radio" name="{{ forloop.counter }}" id="{{ q.option2 }}" value="Option2">
+        <label class="form-check-label" for="option2">{{ q.option2 }}</label>
+      </div>
+
+      <div class="form-check mx-4">
+        <input class="form-check-input" type="radio" name="{{ forloop.counter }}" id="{{ q.option3 }}" value="Option3">
+        <label class="form-check-label" for="option3">{{ q.option3 }}</label>
+      </div>
+
+      <div class="form-check mx-4">
+        <input class="form-check-input" type="radio" name="{{ forloop.counter }}" id="{{ q.option4 }}" value="Option4">
+        <label class="form-check-label" for="option4">{{ q.option4 }}</label>
+      </div>
+      {% endfor %}
+      <input class="btn btn-success btn-lg" style="border-radius: 0%;" type="submit" value="Submit Answers">
+    </form>
+  </div>
+
+  <div id="video-container" draggable="true">
+    <video id="video" autoplay></video>
+  </div>
+  <canvas id="webcam-canvas" style="display: none;"></canvas>
+  <input type="file" id="imageInput" accept="image/*" style="display: none;">
+  <!-- Add an input element to trigger file selection -->
+  <p id="warning-count"></p>
+  <!-- Modal -->
+  <div class="modal fade" id="customModal" tabindex="-1" role="dialog" aria-labelledby="customModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="customModalLabel">Warning</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p id="modal-message"></p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary" data-dismiss="modal">OK</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+</body>
+<script>
+  const video = document.getElementById('video');
+  const videoContainer = document.getElementById('video-container');
+  const canvas = document.getElementById('webcam-canvas');
+  const ctx = canvas.getContext('2d');
+  let offsetX = 0;
+  let offsetY = 0;
+  let dragging = false;
+  let warningCount = 0;
+  const warningDisplay = document.getElementById('warning-count');
+  let modalOpen = false;
+
+  navigator.mediaDevices.getUserMedia({ video: true })
+    .then(function (stream) {
+      video.srcObject = stream;
+      video.play();
+    })
+    .catch(function (err) {
+      console.log("An error occurred: " + err);
+    });
+
+  // Function to save selected answers
+  function saveAns() {
+    const inputs = document.getElementsByTagName('input');
+    for (let i = 0; i < inputs.length; i++) {
+      if (inputs[i].type === "radio" && inputs[i].checked) {
+        setCookie(inputs[i].name, inputs[i].value, 3);
+      }
+    }
+  }
+
+  // Function to set cookie
+  function setCookie(cname, cvalue, exdays) {
+    const d = new Date();
+    d.setTime(d.getTime() + (exdays * 24 * 60 * 60 * 1000));
+    const expires = "expires=" + d.toUTCString();
+    document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
+  }
+
+  // Make the video container draggable
+  videoContainer.addEventListener('mousedown', function (e) {
+    dragging = true;
+    offsetX = e.clientX - videoContainer.getBoundingClientRect().left;
+    offsetY = e.clientY - videoContainer.getBoundingClientRect().top;
+  });
+
+  videoContainer.addEventListener('mousemove', function (e) {
+    if (dragging) {
+      videoContainer.style.left = (e.clientX - offsetX) + 'px';
+      videoContainer.style.top = (e.clientY - offsetY) + 'px';
+    }
+  });
+
+  videoContainer.addEventListener('mouseup', function () {
+    dragging = false;
+  });
+  let noFaceTimer = null;
+  let noFaceCount = 0;
+
+  // Capture an image from the webcam
+  function captureImage() {
+    if (modalOpen) {
+      return; // Skip capturing image if modal is open
+    }
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    // Convert the canvas content to a data URL representing the image
+    const imageDataURL = canvas.toDataURL('image/jpeg');
+
+    // Convert the data URL to a Blob object
+    const blob = dataURItoBlob(imageDataURL);
+
+    // Create a FormData object and append the Blob
+    const formData = new FormData();
+    formData.append('image', blob, 'webcam_image.jpeg');
+
+    // Send the image data to the server
+    fetch('/student/count_people', {
+      method: 'POST',
+      body: formData
+    })
+      .then(response => response.json())
+      .then(data => {
+        const peopleCount = data.faces_count;
+        if (peopleCount > 0) {
+          noFaceCount= 0;
+        } else {
+          noFaceCount++;
+          if (noFaceCount >= 3) {
+            // Show alert after 10 seconds of no face detected
+            alert("No faces detected for 10 seconds!");
+            noFaceTimer = 0;
+            submitForm();
+          }
+        }
+
+        if (peopleCount > 1) {
+          warningCount++;
+          displayMoreFaceWarning();
+          saveImage(blob);
+          if (warningCount > 4) {
+            const message = "Suspicious Activity Limit Exceeded: Form Submitted. Please contact the team for assistance if needed.";
+            showModal(message);
+          }
+        }
+        if (peopleCount === 0) {
+          warningCount++;
+          displayWarning();
+          saveImage(blob);
+          if (warningCount > 4) {
+            const message = "Suspicious Activity Limit Exceeded: Form Submitted. Please contact the team for assistance if needed.";
+            showModal(message);
+          }
+        }
+      })
+      .catch(error => console.error('Error counting people:', error));
+  }
+
+  // Alert when user changes tabs
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === 'hidden') {
+      warningCount++;
+      displayTabChanges();
+    }
+    if (warningCount > 4) {
+      const message = "Suspicious Activity Limit Exceeded: Form Submitted. Please contact the team for assistance if needed.";
+      showModal(message);
+    }
+  });
+
+
+  // Helper function to convert data URL to Blob
+  function dataURItoBlob(dataURI) {
+    const byteString = atob(dataURI.split(',')[1]);
+    const mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
+    const ab = new ArrayBuffer(byteString.length);
+    const ia = new Uint8Array(ab);
+    for (let i = 0; i < byteString.length; i++) {
+      ia[i] = byteString.charCodeAt(i);
+    }
+    const blob = new Blob([ab], { type: mimeString });
+    return blob;
+  }
+
+  // Display warning messages
+  function displayMoreFaceWarning() {
+    const remainingWarnings = 5 - warningCount;
+
+    Toastify({
+      text: `Warning: More Than One face Detected! Warning left:${remainingWarnings}`,
+      duration: 5000,
+      close: true,
+      gravity: "top", // Display at the top
+      position: "center", // Center horizontally
+      backgroundColor: "red"
+    }).showToast();
+  }
+
+  function displayWarning() {
+    const remainingWarnings = 5 - warningCount;
+
+    Toastify({
+      text: `Warning: No face Detected! Warning left:${remainingWarnings}`,
+      duration: 5000,
+      close: true,
+      gravity: "top", // Display at the top
+      position: "center", // Center horizontally
+      backgroundColor: "red"
+
+    }).showToast();
+  }
+
+  function displayTabChanges() {
+    const remainingWarnings = 5 - warningCount;
+    Toastify({
+      text: `You switched tabs or left the page.! Warning left:${remainingWarnings}`,
+      duration: 5000,
+      close: true,
+      gravity: "top", // Display at the top
+      position: "center", // Center horizontally
+      backgroundColor: "red"
+    }).showToast();
+  }
+  captureImage();
+  setInterval(captureImage, 3000);
+
+  function submitForm() {
+    const form = document.querySelector('.form');
+    if (form) {
+      form.action = "{% url 'calculate-marks' %}"; // Set the action URL
+      form.submit(); // Submit the form
+    }
+  }
+
+  function showModal(message) {
+    const modalMessage = document.getElementById('modal-message');
+    if (modalMessage) {
+      modalMessage.textContent = message;
+    }
+    $('#customModal').modal('show');
+    modalOpen = true;
+  }
+
+  // Function to handle modal close event
+  function closeModal() {
+    modalOpen = false;
+    submitForm();
+  }
+
+  // Add event listener to the "OK" button
+  const okButton = document.querySelector('#customModal .btn-primary');
+  if (okButton) {
+    okButton.addEventListener('click', function () {
+      closeModal();
+    });
+  }
+
+  function saveImage(blob) {
+    const formData = new FormData();
+    formData.append('image', blob, 'suspicious_image.jpeg');
+
+    // Send the image data to the server
+    fetch('/student/save_image', {
+      method: 'POST',
+      body: formData
+    })
+      .then(response => {
+        if (response.ok) {
+          console.log('Image saved successfully.');
+        } else {
+          console.error('Failed to save image.');
+        }
+      })
+      .catch(error => console.error('Error saving image:', error));
+  }
+
+
+</script>
+<script>
+  // Set the countdown time to 30 minutes (30 minutes * 60 seconds)
+  let countdownTime = 30 * 60;
+  let countdownInterval;
+
+  // Function to start the countdown timer
+  function startTimer() {
+    countdownInterval = setInterval(updateTimer, 1000);
+  }
+
+  // Function to update the timer every second
+  function updateTimer() {
+    const minutes = Math.floor(countdownTime / 60);
+    const seconds = countdownTime % 60;
+
+    // Display the timer in the format MM:SS
+    const timerElement = document.getElementById('timer');
+    if (timerElement) {
+      timerElement.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+    }
+
+    // If the countdown reaches 0, stop the timer and call submitForm()
+    if (countdownTime === 0) {
+      clearInterval(countdownInterval);
+      submitForm();
+    } else {
+      countdownTime--; // Decrease the countdown time by 1 second
+    }
+  }
+
+  // Call startTimer() to begin the countdown
+  startTimer();
+</script>
+<script>
+  document.addEventListener('keydown', function(event) {
+      // Check if Ctrl key is pressed along with 'C' or 'V'
+      if ((event.ctrlKey || event.metaKey) && (event.key === 'c' || event.key === 'v')) {
+          // Prevent default behavior
+          event.preventDefault();
+      }
+  });
+
+  // Disable right-click context menu (optional)
+  document.addEventListener('contextmenu', function(event) {
+      event.preventDefault();
+  });
+
+  // Disable mouse selection (optional)
+  document.addEventListener('selectstart', function(event) {
+      event.preventDefault();
+  });
+</script>
+</html>
